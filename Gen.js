@@ -105,7 +105,7 @@ function show() {
   }
   console.log(rng._seed)
 
-  for (var i = 0; i < (2); i++) {
+  for (var i = 0; i < (3*10); i++) {
     locations.push(new place())
   }
   for (var i = 0; i < peeps.length; i++) {
@@ -212,7 +212,7 @@ class place {
     }
     this.people = []
     for (var i = 0; i < this.population; i++) {
-      this.people.push(new character(this.race).name)
+      this.people.push(new character(this.race))
     }
   }
 }
