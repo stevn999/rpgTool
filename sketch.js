@@ -1,35 +1,38 @@
-function urlP(parameter, defaultvalue){
-    var urlparameter = defaultvalue;
-    if(window.location.href.indexOf(parameter) > -1){
-        urlparameter = getUrlVars()[parameter];
-        }
-    return urlparameter;
+function urlP(parameter, defaultvalue) {
+  var urlparameter = defaultvalue;
+  if (window.location.href.indexOf(parameter) > -1) {
+    urlparameter = getUrlVars()[parameter];
+  }
+  return urlparameter;
 }
+
 function getUrlVars() {
-    var vars = {};
-    var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
-        vars[key] = value;
-    });
-    return vars;
+  var vars = {};
+  var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m, key, value) {
+    vars[key] = value;
+  });
+  return vars;
 }
-let seed = urlP('seed',Date.now())
+let seed = urlP('seed', Date.now())
 let rng = new prandom(seed)
 let peeps = []
 let factions = []
 let locations = []
 let grids = []
+let debug = false
+let comp = 0
 let drops = []
-let subs = 5
-let size = (subs * 100)
+let subs = 3
+let size = (subs * urlP('res', 100))
 let itt = 0
-let noiseScale = 0.04
+let noiseScale = 0.03
 let rs = size / subs
 let loaded = 0
 
 function setup() {
   noiseSeed(rng._seed)
   createCanvas(size, size)
-  noiseDetail(10, 0.50)
+  noiseDetail(10, 0.40)
   background(200)
   text("click to generate map\nmay take a long time", width / 2, height / 2)
   show()
@@ -39,12 +42,12 @@ function setup() {
         grids.push(new grid(i, j))
       }
     }
-     for (g of grids) {
-       if (srandom(0,100,true)==0) {
-         drops.push(new drop(g.x,g.y))
+    for (g of grids) {
+      if (srandom(0, 50, true) == 0) {
+        drops.push(new drop(g.x, g.y))
 
-       }
-     }
+      }
+    }
   }, 0)
 }
 
@@ -76,31 +79,38 @@ function adjacent(x, y) {
 
 
 function draw() {
-  info.html(`${((loaded/grids.length)*100).toFixed(1)}% loaded: ${frameRate().toFixed(2)}fps`);
+  info.html(`${((loaded/grids.length)*100).toFixed(3)}% loaded: ${frameRate().toFixed(2)}fps: ${comp} calculations`);
   //background(20)
-  if (loaded==grids.length) {
+  if (loaded == grids.length ||comp >= 10000000) {
     noLoop()
   }
   noStroke()
   for (g of grids) {
-    if ((frameCount+g.x)%2==0) {
+    if ((frameCount + g.x) % 2 == 0) {
       if (g.neighbors == [] || !g.neighbors) {
         //g.set()
       }
       if ((g.height) > (125)) {
         fill(0)
       } else {
-        fill(map(255 - g.height, 255 - 125, 255, 0, 255, true))
+        if (debug) {
+          fill((map(255 - g.height, 255 - 125, 255, 0, 255, true) % 30) * 20)
+
+        } else {
+          fill(map(255 - g.height, 255 - 125, 255, 0, 255, true))
+        }
       }
       rect(g.x * subs, g.y * subs, subs, subs)
     }
   }
-  fill(0, 200, 0)
   for (d of drops) {
-    //ellipse(d.x * subs+subs/2, d.y * subs+subs/2, 2)
-    for (var i = 0; i < 5; i++) {
-    d.step()
-  }
+    if (debug) {
+      fill(0, 200, 0)
+      ellipse(d.x * subs + subs / 2, d.y * subs + subs / 2, 2)
+    }
+    for (var i = 0; i < 50; i++) {
+      d.step()
+    }
   }
 }
 class grid {
@@ -109,7 +119,7 @@ class grid {
     this.y = y
     this.tempHeight = 0
     //this.height = (dist(this.x,this.y,(size/subs)/2,(size/subs)/2))
-    this.height = (noise(this.x * noiseScale, this.y * noiseScale)) * 265
+    this.height = (noise(this.x * noiseScale, this.y * noiseScale)) * 295
     //this.height = ((this.x - (rs / 2)) / rs) * 255
     //console.log(noise(this.x,this.y));
 
@@ -127,8 +137,8 @@ class grid {
   }
 }
 class drop {
-  constructor(x = srandom(0, rs - 1, true),y = srandom(0, rs - 1, true)) {
-    this.life = 5
+  constructor(x = srandom(0, rs - 1, true), y = srandom(0, rs - 1, true)) {
+    this.life = 50
     this.holding = 0
     this.x = x
     this.vx = 0
@@ -140,7 +150,8 @@ class drop {
   step() {
     this.life -= srandom(1, 5, true)
     if (this.life <= 0) {
-      this.life = 21
+      comp++
+      this.life = 210
       this.x = srandom(0, rs - 1, true)
       this.y = srandom(0, rs - 1, true)
       this.in = grids.find(obj => obj.x == this.x && obj.y == this.y)
@@ -148,7 +159,7 @@ class drop {
     if (this.in) {
       if (!this.in.neighbors) {
         this.in.set()
-        loaded+=1
+        loaded += 1
       }
       let th = this.in
       for (var i = 0; i < this.in.neighbors.length; i++) {
@@ -157,7 +168,7 @@ class drop {
           th = g
         }
       }
-      if (th == this.in) {
+      if (th == this.in || srandom(0,5,true)==0) {
         th = srandom(this.in.neighbors)
       }
       let next = th
@@ -165,11 +176,11 @@ class drop {
         this.life = 0
         return
       }
-      if (next.height >= 125) {
+      if (next.height >= 135) {
         this.life = 0
       }
-      this.in.height += 1
-      this.hold += 1
+      this.in.height += 0.5
+      this.hold += 0.5
 
 
       if (next) {
