@@ -27,11 +27,11 @@ let rs = size / subs
 let loaded = 0
 
 function setup() {
+  noiseSeed(rng._seed)
   createCanvas(size, size)
   noiseDetail(10, 0.50)
   background(200)
   text("click to generate map\nmay take a long time", width / 2, height / 2)
-  noiseSeed(seed)
   show()
   setTimeout(function() {
     for (var i = 0; i < size / subs; i++) {
