@@ -19,12 +19,15 @@ let peeps = []
 let factions = []
 let locations = []
 let grids = []
+let bias = urlP('bias', 3)
 let debug = false
+let lt = Date.now()
 let comp = 0
 let drops = []
 let subs = 3
 let size = (subs * urlP('res', 100))
 let itt = 0
+let lastpredict = 0
 let noiseScale = 0.03
 let rs = size / subs
 let loaded = 0
@@ -32,7 +35,7 @@ let loaded = 0
 function setup() {
   noiseSeed(rng._seed)
   createCanvas(size, size)
-  noiseDetail(10, 0.40)
+  noiseDetail(20, 0.40)
   background(200)
   text("click to generate map\nmay take a long time", width / 2, height / 2)
   show()
@@ -43,12 +46,13 @@ function setup() {
       }
     }
     for (g of grids) {
-      if (srandom(0, 50, true) == 0) {
+      if (srandom(0, 5000, true) == 0) {
         drops.push(new drop(g.x, g.y))
 
       }
     }
   }, 0)
+  noLoop()
 }
 
 function mouseClicked() {
@@ -79,9 +83,14 @@ function adjacent(x, y) {
 
 
 function draw() {
-  info.html(`${((loaded/grids.length)*100).toFixed(3)}% loaded: ${frameRate().toFixed(2)}fps: ${comp} calculations`);
+  if (frameRate() >= 10) {
+    drops.push(new drop())
+  }
+  let p = predict(lt,1000000-comp)
+  info.html(`${((loaded/grids.length)*100).toFixed(3)}% loaded: ${frameRate().toFixed(2)}fps: ${((comp/1000000)*100).toFixed(2)}% done with generating ${((p+lastpredict)/2).toFixed(0)}`);
   //background(20)
-  if (loaded == grids.length ||comp >= 10000000) {
+  lastpredict = ((p+lastpredict)/2)
+  if (comp >= 1000000) {
     noLoop()
   }
   noStroke()
@@ -112,6 +121,12 @@ function draw() {
       d.step()
     }
   }
+  lt = Date.now()
+}
+function predict(time,remaining) {
+  let per = Date.now()-time
+  return +(((remaining*per)/1000)/60).toFixed(0)
+
 }
 class grid {
   constructor(x, y) {
@@ -119,7 +134,10 @@ class grid {
     this.y = y
     this.tempHeight = 0
     //this.height = (dist(this.x,this.y,(size/subs)/2,(size/subs)/2))
-    this.height = (noise(this.x * noiseScale, this.y * noiseScale)) * 295
+    this.height = ((noise(this.x * noiseScale, this.y * noiseScale)) * 255-bias)
+    if (this.x == rs-1) {
+      this.height = 580
+    }
     //this.height = ((this.x - (rs / 2)) / rs) * 255
     //console.log(noise(this.x,this.y));
 
@@ -136,6 +154,7 @@ class grid {
     this.tavg = (sum) / 9
   }
 }
+
 class drop {
   constructor(x = srandom(0, rs - 1, true), y = srandom(0, rs - 1, true)) {
     this.life = 50
@@ -148,18 +167,46 @@ class drop {
     //console.log(this.x,this.y,"h");
   }
   step() {
+
     this.life -= srandom(1, 5, true)
     if (this.life <= 0) {
       comp++
-      this.life = 210
+      this.life = 6
       this.x = srandom(0, rs - 1, true)
       this.y = srandom(0, rs - 1, true)
+      // this.x = Math.round(mouseX/subs)+srandom(-1,1,true)
+      // this.y = Math.round(mouseY/subs)+srandom(-1,1,true)
+      this.vx = srandom(-1,1,true)
+      this.vy = srandom(-1,1,true)
       this.in = grids.find(obj => obj.x == this.x && obj.y == this.y)
     }
     if (this.in) {
       if (!this.in.neighbors) {
         this.in.set()
         loaded += 1
+      }
+      if (this.vx != 0 && this.vy != 0) {
+        if ([this.vx,this.vy] == [-1,1]) {
+          this.vnext = this.in.neighbors[0]
+        }else if ([this.vx,this.vy] == [0,1]) {
+          this.vnext = this.in.neighbors[1]
+        }else if ([this.vx,this.vy] == [1,1]) {
+          this.vnext = this.in.neighbors[2]
+
+        }else if ([this.vx,this.vy] == [-1,0]) {
+          this.vnext = this.in.neighbors[3]
+        }else if ([this.vx,this.vy] == [1,0]) {
+          this.vnext = this.in.neighbors[4]
+
+        }else if ([this.vx,this.vy] == [-1,-1]) {
+          this.vnext = this.in.neighbors[5]
+        }else if ([this.vx,this.vy] == [0,-1]) {
+          this.vnext = this.in.neighbors[6]
+        }else if ([this.vx,this.vy] == [1,-1]) {
+          this.vnext = this.in.neighbors[7]
+        }
+      }else {
+        this.vnext = srandom(this.in.neighbors)
       }
       let th = this.in
       for (var i = 0; i < this.in.neighbors.length; i++) {
@@ -168,8 +215,8 @@ class drop {
           th = g
         }
       }
-      if (th == this.in || srandom(0,5,true)==0) {
-        th = srandom(this.in.neighbors)
+      if (srandom(0,5,true)<1) {
+        th = this.vnext
       }
       let next = th
       if (!next) {
@@ -179,11 +226,19 @@ class drop {
       if (next.height >= 135) {
         this.life = 0
       }
-      this.in.height += 0.5
-      this.hold += 0.5
+      this.in.height += 0.2
+      this.hold += 0.2
+
 
 
       if (next) {
+        if (debug) {
+          fill(0,200,0,20)
+          ellipse(this.x * subs + subs / 2, this.y * subs + subs / 2, random(1,5))
+        }
+        this.life -= 1
+        this.vx = this.x - next.x
+        this.vy = this.y - next.y
         this.in = next
         this.in.height -= this.hold
         this.hold = 0
