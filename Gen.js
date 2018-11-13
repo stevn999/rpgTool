@@ -96,6 +96,7 @@ function reset(sed = Date.now()) {
 
 function show() {
   sd = createDiv(seed)
+  info = createDiv()
   div0 = createDiv()
   div1 = createDiv()
   div0.parent(div1)
