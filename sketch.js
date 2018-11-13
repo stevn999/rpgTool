@@ -19,8 +19,8 @@ let factions = []
 let locations = []
 let grids = []
 let drops = []
-let subs = 3
-let size = (subs * 128)
+let subs = 5
+let size = (subs * 100)
 let itt = 0
 let noiseScale = 0.04
 let rs = size / subs
@@ -30,7 +30,7 @@ function setup() {
   createCanvas(size, size)
   noiseDetail(10, 0.50)
   background(200)
-  text("loading", width / 2, height / 2)
+  text("click to generate map\nmay take a long time", width / 2, height / 2)
   noiseSeed(seed)
   show()
   setTimeout(function() {
@@ -40,7 +40,7 @@ function setup() {
       }
     }
      for (g of grids) {
-       if (srandom(0,1000,true)==0) {
+       if (srandom(0,100,true)==0) {
          drops.push(new drop(g.x,g.y))
 
        }
@@ -49,10 +49,7 @@ function setup() {
 }
 
 function mouseClicked() {
-  noiseScale /= 1.2
-  for (g of grids) {
-    //g.height = ((((g.height / 255) * 10) + (noise(g.x * noiseScale, g.y * noiseScale))) / 11) * 255
-  }
+  loop()
 }
 
 function mouseDragged() {
@@ -81,6 +78,9 @@ function adjacent(x, y) {
 function draw() {
   info.html(`${((loaded/grids.length)*100).toFixed(1)}% loaded: ${frameRate().toFixed(2)}fps`);
   //background(20)
+  if (loaded==grids.length) {
+    noLoop()
+  }
   noStroke()
   for (g of grids) {
     if ((frameCount+g.x)%2==0) {
@@ -109,7 +109,7 @@ class grid {
     this.y = y
     this.tempHeight = 0
     //this.height = (dist(this.x,this.y,(size/subs)/2,(size/subs)/2))
-    this.height = (noise(this.x * noiseScale, this.y * noiseScale)) * 255
+    this.height = (noise(this.x * noiseScale, this.y * noiseScale)) * 265
     //this.height = ((this.x - (rs / 2)) / rs) * 255
     //console.log(noise(this.x,this.y));
 
